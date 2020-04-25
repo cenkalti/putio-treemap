@@ -1,0 +1,3 @@
+putio.py==8.6.0
+plotly==4.6.0
+flask==1.1.1
