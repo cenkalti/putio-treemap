@@ -1,3 +1,4 @@
+import time
 import threading
 from queue import Queue, Empty
 from typing import Dict
@@ -15,13 +16,15 @@ class File:
 
 
 def get(token: str, file_id: int):
-    client = putiopy.Client(token)
+    def log(*args):
+        print(f'[{token[:4]}]', *args)
 
+    client = putiopy.Client(token)
     files: Dict[int, File] = {}
     processed = 0
     root = client.File.get(file_id)
     total_size = root.size
-    print("total size of root:", total_size)
+    log("total size of file(%d): %d gb" % (file_id, total_size // 2**30))
 
     def append_file(putio_file, size):
         nonlocal processed
@@ -29,8 +32,8 @@ def get(token: str, file_id: int):
         files[f.id] = f
         if putio_file.content_type != 'application/x-directory':
             processed += f.size
-            print("processed %d of %d gb for token %s" % (
-                processed // 2**30, total_size // 2**30, token[:4]))
+            log("processed %d of %d gb" % (
+                processed // 2**30, total_size // 2**30))
 
     def append_children_recursive(putio_file, total_sizes: Queue) -> None:
         children = putio_file.dir()
@@ -62,7 +65,10 @@ def get(token: str, file_id: int):
         total_sizes.put(children_size)
         append_file(putio_file, children_size)
 
+    start = time.time()
     append_children_recursive(root, Queue())
+    end = time.time()
+    log('file tree traversed in %s seconds' % (end - start))
 
     ids = []
     labels = []
