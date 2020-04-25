@@ -37,12 +37,12 @@ def get(token: str, file_id: int):
         if putio_file.folder_type == 'SHARED_ROOT':
             return
 
-        append_file(putio_file)
-
         if putio_file.content_type == 'application/x-directory':
+            total_size = 0
             children = putio_file.dir()
             threads = []
             for child in children:
+                total_size += child.size
                 if child.content_type == 'application/x-directory':
                     t = threading.Thread(target=get_folder_recursive,
                                          args=(child, ))
@@ -52,6 +52,9 @@ def get(token: str, file_id: int):
                     append_file(child)
             for t in threads:
                 t.join()
+
+        putio_file.size = total_size
+        append_file(putio_file)
 
     get_folder_recursive(root)
 
