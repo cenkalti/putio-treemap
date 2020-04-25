@@ -96,7 +96,9 @@ def get(token: str, file_id: int):
     ))
     return fig.to_html(include_plotlyjs='cdn')
 
-# TODO combine many items
-# TODO favorite tools
+# TODO save token in session
+# TODO limit number of children
+# TODO limit number of levels
 # TODO filter small items
-# TODO api method children count
+# TODO combine many items
+# TODO add to favorite tools
