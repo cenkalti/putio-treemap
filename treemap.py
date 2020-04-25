@@ -70,12 +70,6 @@ def get(token: str, file_id: int):
 
 # TODO thread pool
 # TODO combine many items
-# TODO heroku
-# TODO github
-# TODO deploy on push
-# TODO auth
 # TODO favorite tools
 # TODO filter small items
 # TODO api method children count
-# TODO show sizes in human
-# TODO gunicorn
