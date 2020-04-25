@@ -6,6 +6,9 @@ from typing import Dict
 import putiopy
 import plotly.graph_objects as go
 
+MAX_CHILDREN = 20
+# MAX_LEVEL = 5
+
 
 class File:
     def __init__(self, putio_file, size):
@@ -13,6 +16,17 @@ class File:
         self.parent_id = putio_file.parent_id
         self.name = putio_file.name
         self.size = size
+
+
+def list_children(file_id: int, client: putiopy.Client):
+    params = {
+            'parent_id': file_id,
+            'per_page': str(MAX_CHILDREN),
+            'sort_by': 'SIZE_DESC',
+    }
+    d = client.request('/files/list', params=params)
+    files = d['files']
+    return [client.File(f) for f in files]
 
 
 def get(token: str, file_id: int):
@@ -26,6 +40,7 @@ def get(token: str, file_id: int):
     total_size = root.size
     log("total size of file(%d): %d gb" % (file_id, total_size // 2**30))
 
+    # TODO inline
     def append_file(putio_file, size):
         nonlocal processed
         f = File(putio_file, size)
@@ -36,11 +51,11 @@ def get(token: str, file_id: int):
                 processed // 2**30, total_size // 2**30))
 
     def append_children_recursive(putio_file, total_sizes: Queue) -> None:
-        children = putio_file.dir()
+        children = list_children(putio_file.id, client)
         threads = []
         children_sizes: Queue[int] = Queue()
         for child in children:
-            if putio_file.folder_type == 'SHARED_ROOT':
+            if child.folder_type == 'SHARED_ROOT':
                 continue
 
             if child.content_type == 'application/x-directory':
@@ -62,8 +77,12 @@ def get(token: str, file_id: int):
             except Empty:
                 break
 
-        total_sizes.put(children_size)
-        append_file(putio_file, children_size)
+        dir_size = putio_file.size
+        if children_size > dir_size:
+            dir_size = children_size
+
+        total_sizes.put(dir_size)
+        append_file(putio_file, dir_size)
 
     start = time.time()
     append_children_recursive(root, Queue())
@@ -96,7 +115,6 @@ def get(token: str, file_id: int):
     ))
     return fig.to_html(include_plotlyjs='cdn')
 
-# TODO limit number of children
 # TODO limit number of levels
 # TODO filter small items
 # TODO combine many items
