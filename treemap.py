@@ -32,7 +32,8 @@ def get(token: str, file_id: int):
         files[f.id] = f
         if putio_file.content_type != 'application/x-directory':
             processed += putio_file.size
-            print("processed %d of %d gb" % (processed // 2**30, total_size // 2**30))
+            print("processed %d of %d gb" % (
+                processed // 2**30, total_size // 2**30))
 
         if putio_file.content_type == 'application/x-directory':
             children = putio_file.dir()
