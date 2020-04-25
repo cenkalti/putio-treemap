@@ -82,7 +82,7 @@ def get(token: str, file_id: int):
         texttemplate='%{label}',
         hovertemplate='%{label}<br>%{value:.2s}<extra></extra>',
     ))
-    return fig.to_html()
+    return fig.to_html(include_plotlyjs='cdn')
 
 # TODO thread pool
 # TODO combine many items
