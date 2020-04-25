@@ -7,7 +7,7 @@ import putiopy
 import plotly.graph_objects as go
 
 MAX_CHILDREN = 20
-# MAX_LEVEL = 5
+MAX_LEVEL = 3
 
 
 class File:
@@ -40,7 +40,8 @@ def get(token: str, file_id: int):
     total_size = root.size
     log("total size of file(%d): %d gb" % (file_id, total_size // 2**30))
 
-    def append_children_recursive(putio_file, total_sizes: Queue) -> None:
+    def append_children_recursive(
+            putio_file, total_sizes: Queue, level: int) -> None:
         nonlocal processed
         children = list_children(putio_file.id, client)
         threads = []
@@ -49,9 +50,13 @@ def get(token: str, file_id: int):
             if child.folder_type == 'SHARED_ROOT':
                 continue
 
+            if level > MAX_LEVEL:
+                continue
+
             if child.content_type == 'application/x-directory':
-                t = threading.Thread(target=append_children_recursive,
-                                     args=(child, children_sizes))
+                t = threading.Thread(
+                        target=append_children_recursive,
+                        args=(child, children_sizes, level + 1))
                 t.start()
                 threads.append(t)
             else:
@@ -79,7 +84,7 @@ def get(token: str, file_id: int):
         files[putio_file.id] = File(putio_file, dir_size)
 
     start = time.time()
-    append_children_recursive(root, Queue())
+    append_children_recursive(root, Queue(), level=1)
     end = time.time()
     log('file tree traversed in %s seconds' % (end - start))
 
@@ -109,7 +114,4 @@ def get(token: str, file_id: int):
     ))
     return fig.to_html(include_plotlyjs='cdn')
 
-# TODO limit number of levels
-# TODO filter small items
-# TODO combine many items
 # TODO add to favorite tools
