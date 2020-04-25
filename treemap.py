@@ -1,4 +1,5 @@
 import threading
+from queue import Queue, Empty
 from typing import Dict
 
 import putiopy
@@ -6,11 +7,11 @@ import plotly.graph_objects as go
 
 
 class File:
-    def __init__(self, putio_file):
+    def __init__(self, putio_file, size):
         self.id = putio_file.id
         self.parent_id = putio_file.parent_id
         self.name = putio_file.name
-        self.size = putio_file.size
+        self.size = size
 
 
 def get(token: str, file_id: int):
@@ -20,43 +21,48 @@ def get(token: str, file_id: int):
     processed = 0
     root = client.File.get(file_id)
     total_size = root.size
+    print("total size of root:", total_size)
 
-    def append_file(putio_file):
+    def append_file(putio_file, size):
         nonlocal processed
-        # print("appending file id:", putio_file.id)
-        f = File(putio_file)
+        f = File(putio_file, size)
         files[f.id] = f
         if putio_file.content_type != 'application/x-directory':
-            processed += putio_file.size
-            print("processed %d of %d gb" % (
-                processed // 2**30, total_size // 2**30))
+            processed += f.size
+            print("processed %d of %d gb for token %s" % (
+                processed // 2**30, total_size // 2**30, token[:4]))
 
-    append_file(root)
+    def append_children_recursive(putio_file, total_sizes: Queue) -> None:
+        children = putio_file.dir()
+        threads = []
+        children_sizes: Queue[int] = Queue()
+        for child in children:
+            if putio_file.folder_type == 'SHARED_ROOT':
+                continue
 
-    def get_folder_recursive(putio_file):
-        if putio_file.folder_type == 'SHARED_ROOT':
-            return
+            if child.content_type == 'application/x-directory':
+                t = threading.Thread(target=append_children_recursive,
+                                     args=(child, children_sizes))
+                t.start()
+                threads.append(t)
+            else:
+                children_sizes.put(child.size)
+                append_file(child, child.size)
 
-        if putio_file.content_type == 'application/x-directory':
-            total_size = 0
-            children = putio_file.dir()
-            threads = []
-            for child in children:
-                total_size += child.size
-                if child.content_type == 'application/x-directory':
-                    t = threading.Thread(target=get_folder_recursive,
-                                         args=(child, ))
-                    t.start()
-                    threads.append(t)
-                else:
-                    append_file(child)
-            for t in threads:
-                t.join()
+        for t in threads:
+            t.join()
 
-        putio_file.size = total_size
-        append_file(putio_file)
+        children_size = 0
+        while True:
+            try:
+                children_size += children_sizes.get_nowait()
+            except Empty:
+                break
 
-    get_folder_recursive(root)
+        total_sizes.put(children_size)
+        append_file(putio_file, children_size)
+
+    append_children_recursive(root, Queue())
 
     ids = []
     labels = []
@@ -84,7 +90,6 @@ def get(token: str, file_id: int):
     ))
     return fig.to_html(include_plotlyjs='cdn')
 
-# TODO thread pool
 # TODO combine many items
 # TODO favorite tools
 # TODO filter small items
