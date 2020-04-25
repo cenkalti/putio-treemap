@@ -40,17 +40,8 @@ def get(token: str, file_id: int):
     total_size = root.size
     log("total size of file(%d): %d gb" % (file_id, total_size // 2**30))
 
-    # TODO inline
-    def append_file(putio_file, size):
-        nonlocal processed
-        f = File(putio_file, size)
-        files[f.id] = f
-        if putio_file.content_type != 'application/x-directory':
-            processed += f.size
-            log("processed %d of %d gb" % (
-                processed // 2**30, total_size // 2**30))
-
     def append_children_recursive(putio_file, total_sizes: Queue) -> None:
+        nonlocal processed
         children = list_children(putio_file.id, client)
         threads = []
         children_sizes: Queue[int] = Queue()
@@ -65,7 +56,10 @@ def get(token: str, file_id: int):
                 threads.append(t)
             else:
                 children_sizes.put(child.size)
-                append_file(child, child.size)
+                files[child.id] = File(child, child.size)
+                processed += child.size
+                log("processed %d of %d gb" % (
+                    processed // 2**30, total_size // 2**30))
 
         for t in threads:
             t.join()
@@ -82,7 +76,7 @@ def get(token: str, file_id: int):
             dir_size = children_size
 
         total_sizes.put(dir_size)
-        append_file(putio_file, dir_size)
+        files[putio_file.id] = File(putio_file, dir_size)
 
     start = time.time()
     append_children_recursive(root, Queue())
