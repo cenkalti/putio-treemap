@@ -7,7 +7,7 @@ import putiopy
 import plotly.graph_objects as go
 
 MAX_CHILDREN = 20
-MAX_LEVEL = 3
+MAX_LEVEL = 4
 
 
 class File:
