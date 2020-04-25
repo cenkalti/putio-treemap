@@ -1,3 +1,4 @@
+import threading
 from typing import Dict
 
 import putiopy
@@ -16,18 +17,13 @@ def get(token: str, file_id: int):
     client = putiopy.Client(token)
 
     files: Dict[int, File] = {}
-
     processed = 0
     root = client.File.get(file_id)
     total_size = root.size
 
-    def get_folder_recursive(putio_file):
+    def append_file(putio_file):
         nonlocal processed
-
-        if putio_file.folder_type == 'SHARED_ROOT':
-            return
-
-        print("appending file id:", putio_file.id)
+        # print("appending file id:", putio_file.id)
         f = File(putio_file)
         files[f.id] = f
         if putio_file.content_type != 'application/x-directory':
@@ -35,10 +31,27 @@ def get(token: str, file_id: int):
             print("processed %d of %d gb" % (
                 processed // 2**30, total_size // 2**30))
 
+    append_file(root)
+
+    def get_folder_recursive(putio_file):
+        if putio_file.folder_type == 'SHARED_ROOT':
+            return
+
+        append_file(putio_file)
+
         if putio_file.content_type == 'application/x-directory':
             children = putio_file.dir()
+            threads = []
             for child in children:
-                get_folder_recursive(child)
+                if child.content_type == 'application/x-directory':
+                    t = threading.Thread(target=get_folder_recursive,
+                                         args=(child, ))
+                    t.start()
+                    threads.append(t)
+                else:
+                    append_file(child)
+            for t in threads:
+                t.join()
 
     get_folder_recursive(root)
 
