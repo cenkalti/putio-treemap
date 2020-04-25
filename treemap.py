@@ -113,5 +113,3 @@ def get(token: str, file_id: int):
         hovertemplate='%{label}<br>%{value:.2s}<extra></extra>',
     ))
     return fig.to_html(include_plotlyjs='cdn')
-
-# TODO add to favorite tools
