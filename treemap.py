@@ -23,6 +23,7 @@ def list_children(file_id: int, client: putiopy.Client):
             'parent_id': file_id,
             'per_page': str(MAX_CHILDREN),
             'sort_by': 'SIZE_DESC',
+            'no_cursor': 'true',
     }
     d = client.request('/files/list', params=params)
     files = d['files']
