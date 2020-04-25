@@ -50,10 +50,8 @@ def get(token: str, file_id: int):
             if child.folder_type == 'SHARED_ROOT':
                 continue
 
-            if level > MAX_LEVEL:
-                continue
-
-            if child.content_type == 'application/x-directory':
+            if (level < MAX_LEVEL and
+                    child.content_type == 'application/x-directory'):
                 t = threading.Thread(
                         target=append_children_recursive,
                         args=(child, children_sizes, level + 1))
