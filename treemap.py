@@ -106,7 +106,6 @@ def get(token: str, file_id: int):
         labels=labels,
         values=values,
         parents=parents,
-        marker_colorscale='Reds',
         branchvalues='total',
         texttemplate='%{label}',
         hovertemplate='%{label}<br>%{value:.2s}<extra></extra>',
