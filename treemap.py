@@ -10,6 +10,10 @@ MAX_CHILDREN = 20
 MAX_LEVEL = 3
 
 
+class ExpiredToken(Exception):
+    ...
+
+
 class File:
     def __init__(self, putio_file, size):
         self.id = putio_file.id
@@ -37,7 +41,13 @@ def get(token: str, file_id: int):
     client = putiopy.Client(token)
     files: Dict[int, File] = {}
     processed = 0
-    root = client.File.get(file_id)
+    try:
+        root = client.File.get(file_id)
+    except putiopy.ClientError as e:
+        if e.response.status_code == 401 and file_id == 0:
+            raise ExpiredToken
+        raise
+
     total_size = root.size
     log("total size of file(%d): %d gb" % (file_id, total_size // 2**30))
 

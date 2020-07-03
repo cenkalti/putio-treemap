@@ -38,4 +38,7 @@ def logout():
 def get_treemap():
     token = request.args.get('token', session['token'])
     file_id = request.args.get('id', 0, int)
-    return treemap.get(token, file_id)
+    try:
+        return treemap.get(token, file_id)
+    except treemap.ExpiredToken:
+        return redirect(auth_helper.authentication_url)
